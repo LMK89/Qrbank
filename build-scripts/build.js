@@ -48,12 +48,12 @@ const build = async () => {
     platform: 'node',
   });
 
-  // Inline the minified bundle into demo/index.html so the demo file keeps
+  // Inline the minified bundle into docs/index.html so the demo file keeps
   // working when saved/moved standalone (its relative `../dist/...` src
   // breaks the moment it's no longer sitting next to dist/).
   const bundleCore = readFileSync('dist/vietqr-core.min.js', 'utf8').trim();
   const bundleCard = readFileSync('dist/vietqr-card.min.js', 'utf8').trim();
-  const demoPath = 'demo/index.html';
+  const demoPath = 'docs/index.html';
   const demoHtml = readFileSync(demoPath, 'utf8');
   const updatedDemoHtml = demoHtml.replace(
     /<script id="vietqr-bundle">[\s\S]*?<\/script>/,

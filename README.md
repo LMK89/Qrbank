@@ -2,15 +2,29 @@
 
 Module JavaScript thuần sinh mã QR chuyển khoản ngân hàng Việt Nam theo chuẩn EMVCo / Napas.
 
+Thư viện được chia làm 2 phần độc lập, phục vụ các mục đích khác nhau:
+1. `vietqr-core`: Chịu trách nhiệm tạo chuỗi EMVCo Payload, vẽ QR ra thẻ Canvas/SVG, và gắn nhẹ một watermark siêu nhỏ dưới cùng (`qr.lmk.vn`) đảm bảo không lẹm vào vùng quiet zone. Zero dependency, dùng cho các mục đích thiết yếu và tối giản.
+2. `vietqr-card`: Module xử lý render QR thành những layout thẻ chuyên nghiệp, đẹp mắt (như thẻ Polaroid, hoặc thiết kế dạng biên lai). Toàn bộ được xây dựng dựa trên **SVG thuần túy**.
+
 **Zero dependency ngoài. Không gọi API. Không cần backend. Chạy được offline.**
+
+### Vì sao `vietqr-card` sử dụng SVG thuần thay vì HTML/CSS + html-to-image?
+
+Quá trình xây dựng ban đầu có thử nghiệm dùng DOM/HTML kết hợp các thư viện chụp ảnh màn hình ngầm (`html2canvas`, `html-to-image`). Tuy nhiên, phương pháp này gặp phải các nhược điểm nghiêm trọng:
+- Phụ thuộc vào tốc độ nạp Font hệ thống / Webfont của môi trường.
+- Bị dính bẫy `display: none` (không thể render ra ảnh nếu DOM đang bị ẩn, buộc phải dùng các hack CSS `position: fixed; left: -9999px;` kém ổn định).
+- Phình to dung lượng thư viện khi nhúng thêm module rasterize HTML lớn.
+
+Giải pháp thay thế là **tạo cấu trúc card trực tiếp bằng mã SVG**. Cách này vừa siêu nhẹ, đồng bộ (synchronous), hoàn toàn tự cô lập (self-contained), vừa không bị ảnh hưởng bởi CSS của trang cha. Base64 được trả về trực tiếp, sẵn sàng nhét vào thẻ `<img>` và chuyển đổi qua PNG dễ dàng.
 
 ## Tính năng
 
-- Sinh chuỗi payload VietQR từ thông tin tài khoản.
-- Render thành QR trên `<canvas>` hoặc SVG.
+- Sinh chuỗi payload VietQR chuẩn Napas.
+- Render mã QR cơ bản lên `<canvas>` hoặc `<svg>` với watermark.
+- Render thành Card Template (Polaroid, Tối giản) qua file ảnh SVG Base64 (dùng `vietqr-card`).
 - Chạy hoàn toàn trong trình duyệt hoặc Node.js.
-- Không có network call ẩn, an toàn tuyệt đối với thông tin tài khoản người dùng.
-- Tự động chuẩn hóa (sanitize) nội dung chuyển khoản theo chuẩn (bỏ dấu, in hoa, cắt ngắn).
+- An toàn tuyệt đối, không thu thập dữ liệu qua network.
+- Tự động xử lý tiếng Việt có dấu, cắt ngắn đúng chuẩn cho nội dung chuyển khoản.
 
 ## Cài đặt
 

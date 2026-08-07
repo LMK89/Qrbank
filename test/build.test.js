@@ -76,3 +76,16 @@ test('buildVietQR - invalid accountNo', () => {
   assert.throws(() => buildVietQR({ bankBin: '970436', accountNo: '12345678901234567890' }), /Invalid accountNo/); // length 20
   assert.throws(() => buildVietQR({ bankBin: '970436', accountNo: '123!@#' }), /Invalid accountNo/);
 });
+
+test('buildVietQR - purpose is auto-sanitized (accents, case, length)', () => {
+  const payload = buildVietQR({ bankBin: '970436', accountNo: '123', purpose: 'Ăn trưa thứ 7' });
+  const fields = parseTLV(payload);
+  const f62 = parseTLV(fields['62']);
+  assert.strictEqual(f62['08'], 'AN TRUA THU 7');
+});
+
+test('buildVietQR - purpose that sanitizes to empty string omits field 62', () => {
+  const payload = buildVietQR({ bankBin: '970436', accountNo: '123', purpose: '🌍🎉' });
+  const fields = parseTLV(payload);
+  assert.strictEqual(fields['62'], undefined);
+});

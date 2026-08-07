@@ -2,12 +2,12 @@
   "name": "vietqr-core",
   "version": "0.1.0",
   "type": "module",
-  "main": "./dist/vietqr.umd.js",
+  "main": "./dist/vietqr.cjs",
   "module": "./src/index.js",
   "exports": {
     ".": {
       "import": "./src/index.js",
-      "require": "./dist/vietqr.umd.js"
+      "require": "./dist/vietqr.cjs"
     }
   },
   "files": [

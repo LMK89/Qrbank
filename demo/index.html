@@ -105,7 +105,7 @@
         }
 
         if (purpose) {
-          options.purpose = VietQR.sanitizePurpose(purpose);
+          options.purpose = purpose;
         }
 
         const payload = VietQR.buildVietQR(options);

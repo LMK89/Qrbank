@@ -1,5 +1,6 @@
 import { formatTLV } from './tlv.js';
 import { crc16 } from './crc.js';
+import { sanitizePurpose } from './sanitize.js';
 
 /**
  * Builds a VietQR payload string.
@@ -38,8 +39,11 @@ export function buildVietQR({ bankBin, accountNo, amount, purpose, service = 'QR
   // Build field 62 (Additional Data Field)
   let field62 = '';
   if (purpose) {
-    const purposeTLV = formatTLV('08', purpose, 'Purpose');
-    field62 = formatTLV('62', purposeTLV, 'Field62');
+    const sanitizedPurpose = sanitizePurpose(purpose);
+    if (sanitizedPurpose) {
+      const purposeTLV = formatTLV('08', sanitizedPurpose, 'Purpose');
+      field62 = formatTLV('62', purposeTLV, 'Field62');
+    }
   }
 
   // Combine parts

@@ -1,4 +1,5 @@
 import * as esbuild from 'esbuild';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 const build = async () => {
   // IIFE build for <script> tag usage (global `VietQR`), also used by demo/.
@@ -29,6 +30,18 @@ const build = async () => {
     format: 'cjs',
     platform: 'node',
   });
+
+  // Inline the minified bundle into demo/index.html so the demo file keeps
+  // working when saved/moved standalone (its relative `../dist/...` src
+  // breaks the moment it's no longer sitting next to dist/).
+  const bundle = readFileSync('dist/vietqr.umd.min.js', 'utf8').trim();
+  const demoPath = 'demo/index.html';
+  const demoHtml = readFileSync(demoPath, 'utf8');
+  const updatedDemoHtml = demoHtml.replace(
+    /<script id="vietqr-bundle">[\s\S]*?<\/script>/,
+    `<script id="vietqr-bundle">\n${bundle}\n  </script>`
+  );
+  writeFileSync(demoPath, updatedDemoHtml);
 
   console.log('Build complete');
 };

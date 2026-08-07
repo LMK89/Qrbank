@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VietQR Demo</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    @media(min-width: 600px) { body { flex-direction: row; } }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; box-sizing: border-box; }
+    #preview-purpose { font-size: 0.9em; color: #666; margin-top: 5px; display: block; }
+    .result { display: flex; flex-direction: column; align-items: center; gap: 15px; border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9; }
+    #qr-container { background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    code { background: #eee; padding: 10px; border-radius: 4px; word-break: break-all; font-size: 0.85em; width: 100%; box-sizing: border-box; }
+    .buttons { display: flex; gap: 10px; width: 100%; }
+    button { flex: 1; padding: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    .warning { font-size: 0.8em; color: #888; text-align: center; }
+  </style>
+  <script src="../dist/vietqr.umd.min.js"></script>
+</head>
+<body>
+
+  <div style="flex: 1;">
+    <h2>Tạo mã VietQR</h2>
+    <div class="form-group">
+      <label for="bankBin">Ngân hàng (chọn hoặc nhập BIN 6 số):</label>
+      <input type="text" id="bankBin" list="bank-list" placeholder="VD: 970436" maxlength="6">
+      <datalist id="bank-list"></datalist>
+    </div>
+
+    <div class="form-group">
+      <label for="accountNo">Số tài khoản:</label>
+      <input type="text" id="accountNo" placeholder="Nhập số tài khoản" maxlength="19">
+    </div>
+
+    <div class="form-group">
+      <label for="amount">Số tiền (để trống nếu tạo QR tĩnh):</label>
+      <input type="number" id="amount" placeholder="VD: 50000" min="1">
+    </div>
+
+    <div class="form-group">
+      <label for="purpose">Nội dung chuyển khoản (tối đa 25 ký tự):</label>
+      <input type="text" id="purpose" placeholder="VD: AN TRUA">
+      <span id="preview-purpose"></span>
+    </div>
+
+    <p class="warning">Dữ liệu xử lý hoàn toàn trên trình duyệt, không gửi đi đâu. Tuy nhiên, nếu bạn tạo "Link chia sẻ", số tài khoản sẽ nằm trong link.</p>
+  </div>
+
+  <div class="result" style="flex: 1;">
+    <div id="qr-container">
+      <canvas id="qr-canvas"></canvas>
+    </div>
+    <div class="buttons">
+      <button id="btn-download">Tải ảnh PNG</button>
+      <button id="btn-copy-link">Copy link chia sẻ</button>
+    </div>
+    <div style="width: 100%;">
+      <label>Payload thô:</label>
+      <code id="payload-raw">Chưa có dữ liệu</code>
+    </div>
+  </div>
+
+  <script>
+    const elBankBin = document.getElementById('bankBin');
+    const elAccountNo = document.getElementById('accountNo');
+    const elAmount = document.getElementById('amount');
+    const elPurpose = document.getElementById('purpose');
+    const elPreviewPurpose = document.getElementById('preview-purpose');
+    const qrCanvas = document.getElementById('qr-canvas');
+    const elPayloadRaw = document.getElementById('payload-raw');
+    const btnDownload = document.getElementById('btn-download');
+    const btnCopyLink = document.getElementById('btn-copy-link');
+
+    // Populate datalist with verified banks
+    const bankList = document.getElementById('bank-list');
+    VietQR.banks.filter(b => b.verified).forEach(bank => {
+      const option = document.createElement('option');
+      option.value = bank.bin;
+      option.text = `${bank.short} - ${bank.name}`;
+      bankList.appendChild(option);
+    });
+
+    let debounceTimer;
+
+    function updateQR() {
+      const bankBin = elBankBin.value;
+      const accountNo = elAccountNo.value;
+      const amountStr = elAmount.value;
+      const purpose = elPurpose.value;
+
+      elPreviewPurpose.textContent = purpose ? `Sẽ hiển thị là: ${VietQR.sanitizePurpose(purpose)}` : '';
+
+      try {
+        const options = {
+          bankBin,
+          accountNo,
+        };
+
+        if (amountStr) {
+          options.amount = parseInt(amountStr, 10);
+        }
+
+        if (purpose) {
+          options.purpose = VietQR.sanitizePurpose(purpose);
+        }
+
+        const payload = VietQR.buildVietQR(options);
+
+        VietQR.renderVietQR(qrCanvas, payload, { size: 300 });
+        elPayloadRaw.textContent = payload;
+        btnDownload.disabled = false;
+        btnCopyLink.disabled = false;
+        qrCanvas.style.display = 'block';
+
+      } catch (err) {
+        elPayloadRaw.textContent = `Lỗi: ${err.message}`;
+        btnDownload.disabled = true;
+        btnCopyLink.disabled = true;
+        qrCanvas.style.display = 'none';
+      }
+    }
+
+    function onInput() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(updateQR, 200);
+    }
+
+    elBankBin.addEventListener('input', onInput);
+    elAccountNo.addEventListener('input', onInput);
+    elAmount.addEventListener('input', onInput);
+    elPurpose.addEventListener('input', onInput);
+
+    btnDownload.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = `vietqr-${elAccountNo.value}.png`;
+      link.href = qrCanvas.toDataURL('image/png');
+      link.click();
+    });
+
+    btnCopyLink.addEventListener('click', () => {
+      const state = {
+        b: elBankBin.value,
+        a: elAccountNo.value,
+        m: elAmount.value,
+        p: elPurpose.value
+      };
+      const hash = btoa(encodeURIComponent(JSON.stringify(state)));
+      const url = `${window.location.origin}${window.location.pathname}#${hash}`;
+      navigator.clipboard.writeText(url).then(() => {
+        alert('Đã copy link!');
+      });
+    });
+
+    // Load from hash
+    if (window.location.hash) {
+      try {
+        const hash = window.location.hash.substring(1);
+        const state = JSON.parse(decodeURIComponent(atob(hash)));
+        if (state.b) elBankBin.value = state.b;
+        if (state.a) elAccountNo.value = state.a;
+        if (state.m) elAmount.value = state.m;
+        if (state.p) elPurpose.value = state.p;
+      } catch (e) {
+        console.error('Invalid hash');
+      }
+    }
+
+    updateQR();
+  </script>
+</body>
+</html>

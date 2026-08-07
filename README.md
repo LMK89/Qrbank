@@ -31,9 +31,11 @@ npm install github:LMK89/Qrbank
 Hoặc tải qua thẻ `<script>` (UMD version):
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/LMK89/Qrbank@v0.1.0/dist/vietqr.umd.min.js"></script>
+<!-- Dành cho module cốt lõi (tạo payload và render QR cơ bản) -->
+<script src="https://cdn.jsdelivr.net/npm/vietqr@1.2.3/dist/vietqr-core.min.js"></script>
+<!-- Dành cho module tạo layout thẻ (Polaroid, Tối giản) -->
+<script src="https://cdn.jsdelivr.net/npm/vietqr@1.2.3/dist/vietqr-card.min.js"></script>
 ```
-*(Luôn pin theo tag/commit cụ thể như `@v0.1.0`, đừng dùng `@latest`. Repo hiện chưa có tag nào — xem mục "Sau khi public" bên dưới.)*
 
 ## Cách dùng
 
@@ -72,9 +74,17 @@ const payload = buildVietQR({ bankBin: '970436', accountNo: '1234567890', amount
 <!DOCTYPE html>
 <html>
 <body>
+  <!-- Canvas cho QR cơ bản -->
   <canvas id="qr"></canvas>
 
-  <script src="https://cdn.jsdelivr.net/gh/LMK89/Qrbank@v0.1.0/dist/vietqr.umd.min.js"></script>
+  <!-- Image tag cho các template VietQR Card -->
+  <img id="qr-card" />
+
+  <!-- Dành cho module cốt lõi -->
+  <script src="https://cdn.jsdelivr.net/npm/vietqr@1.2.3/dist/vietqr-core.min.js"></script>
+  <!-- Dành cho module tạo layout thẻ -->
+  <script src="https://cdn.jsdelivr.net/npm/vietqr@1.2.3/dist/vietqr-card.min.js"></script>
+
   <script>
     const payload = VietQR.buildVietQR({
       bankBin: '970436',
@@ -82,13 +92,40 @@ const payload = buildVietQR({ bankBin: '970436', accountNo: '1234567890', amount
       amount: 50000
     });
 
+    // 1. Render bằng Core
     VietQR.renderVietQR(document.getElementById('qr'), payload);
+
+    // 2. Render bằng Card Template (Tạo giao diện thẻ)
+    const cardOptions = {
+        bankBin: '970436',
+        accountNo: '1234567890',
+        amount: 50000,
+        accountName: 'NGUYEN VAN A'
+    };
+    const card = VietQRCard.generateVietQRCard(payload, 'polaroid', cardOptions);
+    // Nhúng chuỗi base64 vào thẻ img
+    document.getElementById('qr-card').src = card.dataURL;
   </script>
 </body>
 </html>
 ```
 
-## API
+## Module VietQR Card (`vietqr-card.min.js`)
+
+Module riêng biệt nhằm cung cấp những giao diện thẻ VietQR chuyên nghiệp, được xây dựng hoàn toàn trên nền SVG (không gọi DOM, CSS, html2canvas, đảm bảo ảnh render ra luôn sắc nét & tương thích cao).
+
+### `generateVietQRCard(payload, templateId, data) -> object`
+
+Tạo ra một cấu trúc thẻ từ payload được cung cấp. Cấu trúc trả về bao gồm `svg` (chuỗi) và `dataURL` (base64 SVG).
+
+| Tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `payload` | `string` | **Có** | Chuỗi payload sinh ra từ `buildVietQR`. |
+| `templateId` | `string` | **Có** | Mẫu thiết kế để sinh (e.g. `'minimal'`, `'polaroid'`). |
+| `data` | `object` | **Có** | Thông tin hiển thị: `bankBin`, `accountNo`, `amount`, `purpose`, `accountName`, `bankName`. |
+
+
+## API (vietqr-core)
 
 ### `buildVietQR(options) -> string`
 

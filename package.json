@@ -8,6 +8,10 @@
     ".": {
       "import": "./src/index.js",
       "require": "./dist/vietqr.cjs"
+    },
+    "./card": {
+      "import": "./src/card.js",
+      "require": "./dist/vietqr-card.cjs"
     }
   },
   "files": [

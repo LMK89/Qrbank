@@ -14,9 +14,18 @@ const build = async () => {
   await esbuild.build({
     entryPoints: ['src/index.js'],
     bundle: true,
-    outfile: 'dist/vietqr.umd.min.js',
+    outfile: 'dist/vietqr-core.min.js',
     format: 'iife',
     globalName: 'VietQR',
+    minify: true,
+  });
+
+  await esbuild.build({
+    entryPoints: ['src/card.js'],
+    bundle: true,
+    outfile: 'dist/vietqr-card.min.js',
+    format: 'iife',
+    globalName: 'VietQRCard',
     minify: true,
   });
 
@@ -31,15 +40,24 @@ const build = async () => {
     platform: 'node',
   });
 
+  await esbuild.build({
+    entryPoints: ['src/card.js'],
+    bundle: true,
+    outfile: 'dist/vietqr-card.cjs',
+    format: 'cjs',
+    platform: 'node',
+  });
+
   // Inline the minified bundle into demo/index.html so the demo file keeps
   // working when saved/moved standalone (its relative `../dist/...` src
   // breaks the moment it's no longer sitting next to dist/).
-  const bundle = readFileSync('dist/vietqr.umd.min.js', 'utf8').trim();
+  const bundleCore = readFileSync('dist/vietqr-core.min.js', 'utf8').trim();
+  const bundleCard = readFileSync('dist/vietqr-card.min.js', 'utf8').trim();
   const demoPath = 'demo/index.html';
   const demoHtml = readFileSync(demoPath, 'utf8');
   const updatedDemoHtml = demoHtml.replace(
     /<script id="vietqr-bundle">[\s\S]*?<\/script>/,
-    `<script id="vietqr-bundle">\n${bundle}\n  </script>`
+    `<script id="vietqr-bundle">\n${bundleCore}\n\n${bundleCard}\n  </script>`
   );
   writeFileSync(demoPath, updatedDemoHtml);
 

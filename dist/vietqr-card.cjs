@@ -1716,91 +1716,12 @@ var require_qrcode = __commonJS({
   }
 });
 
-// src/index.js
-var src_exports = {};
-__export(src_exports, {
-  banks: () => banks,
-  buildVietQR: () => buildVietQR,
-  findBank: () => findBank,
-  renderVietQR: () => renderVietQR,
-  sanitizePurpose: () => sanitizePurpose
+// src/card.js
+var card_exports = {};
+__export(card_exports, {
+  generateVietQRCard: () => generateVietQRCard
 });
-module.exports = __toCommonJS(src_exports);
-
-// src/tlv.js
-function formatTLV(id, value, fieldName = id) {
-  if (value === void 0 || value === null) {
-    return "";
-  }
-  const strVal = String(value);
-  if (strVal.length > 99) {
-    throw new Error(`Length of field ${fieldName} exceeds 99 characters`);
-  }
-  const len = strVal.length.toString().padStart(2, "0");
-  return `${id}${len}${strVal}`;
-}
-
-// src/crc.js
-function crc16(str) {
-  let crc = 65535;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= str.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) {
-      if ((crc & 32768) > 0) {
-        crc = crc << 1 ^ 4129;
-      } else {
-        crc = crc << 1;
-      }
-    }
-  }
-  crc &= 65535;
-  return crc.toString(16).toUpperCase().padStart(4, "0");
-}
-
-// src/sanitize.js
-function sanitizePurpose(str) {
-  if (!str) return "";
-  let sanitized = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toUpperCase().replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
-  return sanitized.substring(0, 25).trim();
-}
-
-// src/build.js
-function buildVietQR({ bankBin, accountNo, amount, purpose, service = "QRIBFTTA" }) {
-  if (!bankBin || !/^\d{6}$/.test(bankBin)) {
-    throw new Error("Invalid bankBin: must be 6 digits");
-  }
-  if (!accountNo || typeof accountNo !== "string" || accountNo.length > 19 || !/^[A-Za-z0-9]+$/.test(accountNo)) {
-    throw new Error("Invalid accountNo: must be alphanumeric and max 19 characters");
-  }
-  let amountStr = "";
-  let qrType = "11";
-  if (amount !== void 0 && amount !== null && amount !== 0) {
-    if (!Number.isInteger(amount) || amount < 0 || amount.toString().length > 13) {
-      throw new Error("Invalid amount: must be a positive integer and max 13 digits");
-    }
-    amountStr = amount.toString();
-    qrType = "12";
-  }
-  const consumerId = formatTLV("00", bankBin, "BIN") + formatTLV("01", accountNo, "AccountNo");
-  const napasInfo = formatTLV("00", "A000000727", "AID") + formatTLV("01", consumerId, "ConsumerInfo") + formatTLV("02", service, "ServiceCode");
-  const field38 = formatTLV("38", napasInfo, "Field38");
-  let field62 = "";
-  if (purpose) {
-    const sanitizedPurpose = sanitizePurpose(purpose);
-    if (sanitizedPurpose) {
-      const purposeTLV = formatTLV("08", sanitizedPurpose, "Purpose");
-      field62 = formatTLV("62", purposeTLV, "Field62");
-    }
-  }
-  const payload = formatTLV("00", "01") + // Payload Format Indicator
-  formatTLV("01", qrType) + // Point of Initiation Method
-  field38 + formatTLV("53", "704") + // Transaction Currency
-  (amountStr ? formatTLV("54", amountStr, "Amount") : "") + // Transaction Amount
-  formatTLV("58", "VN") + // Country Code
-  field62 + "6304";
-  const crc = crc16(payload);
-  return payload + crc;
-}
+module.exports = __toCommonJS(card_exports);
 
 // src/render.js
 var import_qrcode_generator = __toESM(require_qrcode(), 1);
@@ -1904,11 +1825,101 @@ var banks = banks_default;
 function findBank(bin) {
   return banks.find((b) => b.bin === bin);
 }
+
+// src/card.js
+function svgToDataURL(svg) {
+  return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+}
+function generateVietQRCard(payload, templateId = "minimal", data = {}) {
+  const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  const qrSize = 300;
+  let bankName = data.bankName;
+  if (!bankName && data.bankBin) {
+    const b = findBank(data.bankBin);
+    if (b) bankName = b.short;
+  }
+  let amountStr = "";
+  if (data.amount) {
+    amountStr = data.amount.toLocaleString("vi-VN") + " VND";
+  }
+  const tempDiv = typeof document !== "undefined" ? document.createElement("div") : null;
+  let qrSvgStr = "";
+  if (tempDiv) {
+    renderVietQR(tempDiv, payload, { size: qrSize });
+    const match = tempDiv.innerHTML.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+    if (match) {
+      qrSvgStr = match[1];
+    }
+  } else {
+    throw new Error("generateVietQRCard requires a DOM environment (document) to parse core SVG.");
+  }
+  if (templateId === "minimal") {
+    const padding = 20;
+    const headerHeight = 40;
+    const cardWidth = qrSize + padding * 2;
+    const cardHeight = headerHeight + qrSize + padding * 2;
+    const badgeW = 36;
+    const badgeH = 26;
+    const badgeX = padding;
+    const badgeY = padding;
+    const titleX = badgeX + badgeW + 10;
+    const titleY = badgeY + 18;
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cardWidth}" height="${cardHeight}" viewBox="0 0 ${cardWidth} ${cardHeight}">`;
+    svg += `<rect width="100%" height="100%" fill="#f4f4f4"/>`;
+    svg += `<rect x="${badgeX}" y="${badgeY}" width="${badgeW}" height="${badgeH}" fill="#e62e10"/>`;
+    svg += `<text x="${badgeX + badgeW / 2}" y="${badgeY + 18}" font-family="${fontStack}" font-weight="900" font-size="16" fill="#ffffff" text-anchor="middle">1E</text>`;
+    svg += `<text x="${titleX}" y="${titleY}" font-family="${fontStack}" font-weight="900" font-size="16" fill="#1f2937">T\u1ED0I GI\u1EA2N</text>`;
+    const qrContainerY = headerHeight + padding;
+    svg += `<rect x="${padding}" y="${qrContainerY}" width="${qrSize}" height="${qrSize}" fill="#ffffff" />`;
+    svg += `<svg x="${padding}" y="${qrContainerY}" width="${qrSize}" height="${qrSize}" viewBox="0 0 ${qrSize} ${qrSize}">`;
+    svg += qrSvgStr;
+    svg += `</svg>`;
+    svg += `</svg>`;
+    return {
+      svg,
+      dataURL: svgToDataURL(svg)
+    };
+  }
+  if (templateId === "polaroid") {
+    const cardWidth = 360;
+    const cardHeight = 480;
+    const innerPadding = 20;
+    const qrDisplaySize = cardWidth - innerPadding * 2;
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cardWidth}" height="${cardHeight}" viewBox="0 0 ${cardWidth} ${cardHeight}">`;
+    svg += `<rect x="5" y="5" width="${cardWidth - 10}" height="${cardHeight - 10}" rx="12" fill="#000000" opacity="0.1"/>`;
+    svg += `<rect x="0" y="0" width="${cardWidth - 10}" height="${cardHeight - 10}" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>`;
+    svg += `<svg x="${innerPadding}" y="${innerPadding}" width="${qrDisplaySize}" height="${qrDisplaySize}" viewBox="0 0 ${qrSize} ${qrSize}">`;
+    svg += qrSvgStr;
+    svg += `</svg>`;
+    let currentY = innerPadding + qrDisplaySize + 30;
+    if (bankName) {
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="16" fill="#6b7280" text-anchor="middle">${bankName}</text>`;
+      currentY += 26;
+    }
+    if (data.accountName) {
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="900" font-size="20" fill="#111827" text-anchor="middle">${data.accountName}</text>`;
+      currentY += 24;
+    }
+    if (data.accountNo) {
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-size="16" fill="#374151" text-anchor="middle">${data.accountNo}</text>`;
+      currentY += 30;
+    }
+    if (amountStr) {
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="24" fill="#2563eb" text-anchor="middle">${amountStr}</text>`;
+      currentY += 26;
+    }
+    if (data.purpose) {
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-size="14" font-style="italic" fill="#6b7280" text-anchor="middle">${data.purpose}</text>`;
+    }
+    svg += `</svg>`;
+    return {
+      svg,
+      dataURL: svgToDataURL(svg)
+    };
+  }
+  throw new Error(`Unknown templateId: ${templateId}`);
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  banks,
-  buildVietQR,
-  findBank,
-  renderVietQR,
-  sanitizePurpose
+  generateVietQRCard
 });

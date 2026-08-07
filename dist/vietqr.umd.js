@@ -1811,26 +1811,46 @@ var VietQR = (() => {
     const {
       size = 256,
       margin = 4,
-      ecLevel = "M",
       dark = "#000000",
-      light = "#FFFFFF"
+      light = "#FFFFFF",
+      centerText,
+      addPolaroidFrame = false,
+      polaroidInfo = {}
     } = options;
+    let ecLevel = options.ecLevel || "M";
+    if (centerText && options.ecLevel === void 0) {
+      ecLevel = "H";
+    }
     const qr = (0, import_qrcode_generator.default)(0, ecLevel);
     qr.addData(payload);
     qr.make();
     const moduleCount = qr.getModuleCount();
+    const actualSize = size;
+    let canvasHeight = size;
+    const polaroidHeight = addPolaroidFrame ? Math.round(size * 0.4) : 0;
+    if (addPolaroidFrame) {
+      canvasHeight += polaroidHeight;
+    }
+    const holeRatio = 0.25;
+    const holeSize = Math.floor(moduleCount * holeRatio);
+    const holePos = Math.floor((moduleCount - holeSize) / 2);
     if (target.tagName && target.tagName.toLowerCase() === "canvas") {
       const canvas = target;
       const ctx = canvas.getContext("2d");
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = actualSize;
+      canvas.height = canvasHeight;
       const tileW = size / (moduleCount + margin * 2);
       const tileH = size / (moduleCount + margin * 2);
       ctx.fillStyle = light;
-      ctx.fillRect(0, 0, size, size);
+      ctx.fillRect(0, 0, actualSize, canvasHeight);
       ctx.fillStyle = dark;
       for (let row = 0; row < moduleCount; row++) {
         for (let col = 0; col < moduleCount; col++) {
+          if (centerText) {
+            if (row >= holePos && row < holePos + holeSize && col >= holePos && col < holePos + holeSize) {
+              continue;
+            }
+          }
           if (qr.isDark(row, col)) {
             const x = (margin + col) * tileW;
             const y = (margin + row) * tileH;
@@ -1838,19 +1858,102 @@ var VietQR = (() => {
           }
         }
       }
+      if (centerText) {
+        const cx = actualSize / 2;
+        const cy = actualSize / 2;
+        const rectSize = holeSize * tileW;
+        ctx.fillStyle = light;
+        ctx.fillRect(cx - rectSize / 2, cy - rectSize / 2, rectSize, rectSize);
+        ctx.fillStyle = dark;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const fontSize = Math.max(10, Math.floor(rectSize / (centerText.length * 0.6)));
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillText(centerText, cx, cy);
+      }
+      if (addPolaroidFrame) {
+        const paddingX = Math.round(actualSize * 0.05);
+        const startY = actualSize + Math.round(polaroidHeight * 0.1);
+        const lineHeight = Math.round(polaroidHeight * 0.15);
+        let currentY = startY + lineHeight;
+        const maxTextWidth = actualSize - paddingX * 2;
+        if (polaroidInfo.bankName) {
+          ctx.fillStyle = dark;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "alphabetic";
+          ctx.font = `bold ${Math.round(lineHeight * 1.2)}px sans-serif`;
+          ctx.fillText(polaroidInfo.bankName, paddingX, currentY, maxTextWidth);
+          currentY += lineHeight * 1.5;
+        }
+        if (polaroidInfo.accountName) {
+          ctx.fillStyle = dark;
+          ctx.textAlign = "left";
+          ctx.font = `${Math.round(lineHeight)}px sans-serif`;
+          ctx.fillText(polaroidInfo.accountName, paddingX, currentY, maxTextWidth);
+          currentY += lineHeight * 1.2;
+        }
+        if (polaroidInfo.amount) {
+          ctx.fillStyle = dark;
+          ctx.textAlign = "left";
+          ctx.font = `bold ${Math.round(lineHeight)}px sans-serif`;
+          ctx.fillText(String(polaroidInfo.amount), paddingX, currentY, maxTextWidth);
+          currentY += lineHeight * 1.2;
+        }
+        if (polaroidInfo.remark) {
+          ctx.fillStyle = dark;
+          ctx.textAlign = "left";
+          ctx.font = `italic ${Math.round(lineHeight * 0.8)}px sans-serif`;
+          ctx.fillText(polaroidInfo.remark, paddingX, currentY, maxTextWidth);
+        }
+      }
     } else {
-      const viewBox = moduleCount + margin * 2;
-      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${viewBox} ${viewBox}">`;
+      const viewBoxW = moduleCount + margin * 2;
+      const viewBoxH = viewBoxW + (addPolaroidFrame ? Math.round(viewBoxW * 0.4) : 0);
+      const svgHeight = canvasHeight;
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${actualSize}" height="${svgHeight}" viewBox="0 0 ${viewBoxW} ${viewBoxH}">`;
       svg += `<rect width="100%" height="100%" fill="${light}"/>`;
       let path = "";
       for (let row = 0; row < moduleCount; row++) {
         for (let col = 0; col < moduleCount; col++) {
+          if (centerText) {
+            if (row >= holePos && row < holePos + holeSize && col >= holePos && col < holePos + holeSize) {
+              continue;
+            }
+          }
           if (qr.isDark(row, col)) {
             path += `M${margin + col},${margin + row}h1v1h-1z`;
           }
         }
       }
       svg += `<path d="${path}" fill="${dark}"/>`;
+      if (centerText) {
+        const cx = margin + moduleCount / 2;
+        const cy = margin + moduleCount / 2;
+        svg += `<rect x="${cx - holeSize / 2}" y="${cy - holeSize / 2}" width="${holeSize}" height="${holeSize}" fill="${light}"/>`;
+        const fontSize = Math.max(1, holeSize / (centerText.length * 0.6));
+        svg += `<text x="${cx}" y="${cy}" font-family="sans-serif" font-weight="bold" font-size="${fontSize}" fill="${dark}" text-anchor="middle" dominant-baseline="middle">${centerText}</text>`;
+      }
+      if (addPolaroidFrame) {
+        const paddingX = margin;
+        const startY = viewBoxW + 2;
+        const lineHeight = Math.max(1, Math.round((viewBoxH - viewBoxW) * 0.15));
+        let currentY = startY + lineHeight;
+        if (polaroidInfo.bankName) {
+          svg += `<text x="${paddingX}" y="${currentY}" font-family="sans-serif" font-weight="bold" font-size="${lineHeight * 1.2}" fill="${dark}" text-anchor="start">${polaroidInfo.bankName}</text>`;
+          currentY += lineHeight * 1.5;
+        }
+        if (polaroidInfo.accountName) {
+          svg += `<text x="${paddingX}" y="${currentY}" font-family="sans-serif" font-size="${lineHeight}" fill="${dark}" text-anchor="start">${polaroidInfo.accountName}</text>`;
+          currentY += lineHeight * 1.2;
+        }
+        if (polaroidInfo.amount) {
+          svg += `<text x="${paddingX}" y="${currentY}" font-family="sans-serif" font-weight="bold" font-size="${lineHeight}" fill="${dark}" text-anchor="start">${polaroidInfo.amount}</text>`;
+          currentY += lineHeight * 1.2;
+        }
+        if (polaroidInfo.remark) {
+          svg += `<text x="${paddingX}" y="${currentY}" font-family="sans-serif" font-style="italic" font-size="${lineHeight * 0.8}" fill="${dark}" text-anchor="start">${polaroidInfo.remark}</text>`;
+        }
+      }
       svg += `</svg>`;
       target.innerHTML = svg;
     }

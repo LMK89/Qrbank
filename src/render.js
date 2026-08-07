@@ -19,10 +19,19 @@ export function renderVietQR(target, payload, options = {}) {
   const {
     size = 256,
     margin = 4,
-    ecLevel = 'M',
     dark = '#000000',
-    light = '#FFFFFF'
+    light = '#FFFFFF',
+    centerText,
+    addPolaroidFrame = false,
+    polaroidInfo = {}
   } = options;
+
+  let ecLevel = options.ecLevel || 'M';
+
+  if (centerText && options.ecLevel === undefined) {
+    // Override ecLevel to High if centerText is used and no specific ecLevel is provided
+    ecLevel = 'H';
+  }
 
   // Generate QR code
   const qr = qrcode(0, ecLevel);
@@ -30,26 +39,49 @@ export function renderVietQR(target, payload, options = {}) {
   qr.make();
 
   const moduleCount = qr.getModuleCount();
+  const actualSize = size;
+  let canvasHeight = size;
+  const polaroidHeight = addPolaroidFrame ? Math.round(size * 0.4) : 0;
+
+  if (addPolaroidFrame) {
+    canvasHeight += polaroidHeight;
+  }
+
+  // Center hole calculation for centerText
+  // Usually the center hole should cover around 20-30% of the QR code area to not break the High EC.
+  const holeRatio = 0.25;
+  const holeSize = Math.floor(moduleCount * holeRatio);
+  const holePos = Math.floor((moduleCount - holeSize) / 2);
 
   if (target.tagName && target.tagName.toLowerCase() === 'canvas') {
     // Render to Canvas
     const canvas = target;
     const ctx = canvas.getContext('2d');
 
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = actualSize;
+    canvas.height = canvasHeight;
 
     const tileW = size / (moduleCount + margin * 2);
     const tileH = size / (moduleCount + margin * 2);
 
     // Draw background (light)
     ctx.fillStyle = light;
-    ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, actualSize, canvasHeight);
 
     // Draw dark modules
     ctx.fillStyle = dark;
     for (let row = 0; row < moduleCount; row++) {
       for (let col = 0; col < moduleCount; col++) {
+        // Skip drawing if in hole area and centerText is provided
+        if (centerText) {
+          if (
+            row >= holePos && row < holePos + holeSize &&
+            col >= holePos && col < holePos + holeSize
+          ) {
+            continue;
+          }
+        }
+
         if (qr.isDark(row, col)) {
           const x = (margin + col) * tileW;
           const y = (margin + row) * tileH;
@@ -58,10 +90,77 @@ export function renderVietQR(target, payload, options = {}) {
         }
       }
     }
+
+    if (centerText) {
+      const cx = actualSize / 2;
+      const cy = actualSize / 2;
+      const rectSize = holeSize * tileW;
+
+      // Draw background for center text
+      ctx.fillStyle = light;
+      ctx.fillRect(cx - rectSize/2, cy - rectSize/2, rectSize, rectSize);
+
+      // Draw center text
+      ctx.fillStyle = dark;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const fontSize = Math.max(10, Math.floor(rectSize / (centerText.length * 0.6))); // basic auto scale
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.fillText(centerText, cx, cy);
+    }
+
+    if (addPolaroidFrame) {
+      const paddingX = Math.round(actualSize * 0.05);
+      const startY = actualSize + Math.round(polaroidHeight * 0.1);
+      const lineHeight = Math.round(polaroidHeight * 0.15);
+      let currentY = startY + lineHeight;
+
+      const maxTextWidth = actualSize - (paddingX * 2);
+
+      // Draw Bank Name
+      if (polaroidInfo.bankName) {
+        ctx.fillStyle = dark;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.font = `bold ${Math.round(lineHeight * 1.2)}px sans-serif`;
+        ctx.fillText(polaroidInfo.bankName, paddingX, currentY, maxTextWidth);
+        currentY += lineHeight * 1.5;
+      }
+
+      // Draw Account Name / Number
+      if (polaroidInfo.accountName) {
+        ctx.fillStyle = dark;
+        ctx.textAlign = 'left';
+        ctx.font = `${Math.round(lineHeight)}px sans-serif`;
+        ctx.fillText(polaroidInfo.accountName, paddingX, currentY, maxTextWidth);
+        currentY += lineHeight * 1.2;
+      }
+
+      // Draw Amount
+      if (polaroidInfo.amount) {
+        ctx.fillStyle = dark;
+        ctx.textAlign = 'left';
+        ctx.font = `bold ${Math.round(lineHeight)}px sans-serif`;
+        ctx.fillText(String(polaroidInfo.amount), paddingX, currentY, maxTextWidth);
+        currentY += lineHeight * 1.2;
+      }
+
+      // Draw Remark
+      if (polaroidInfo.remark) {
+        ctx.fillStyle = dark;
+        ctx.textAlign = 'left';
+        ctx.font = `italic ${Math.round(lineHeight * 0.8)}px sans-serif`;
+        ctx.fillText(polaroidInfo.remark, paddingX, currentY, maxTextWidth);
+      }
+    }
+
   } else {
     // Render as SVG string inside the target div
-    const viewBox = moduleCount + margin * 2;
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${viewBox} ${viewBox}">`;
+    const viewBoxW = moduleCount + margin * 2;
+    const viewBoxH = viewBoxW + (addPolaroidFrame ? Math.round(viewBoxW * 0.4) : 0);
+    const svgHeight = canvasHeight;
+
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${actualSize}" height="${svgHeight}" viewBox="0 0 ${viewBoxW} ${viewBoxH}">`;
 
     // Background
     svg += `<rect width="100%" height="100%" fill="${light}"/>`;
@@ -70,6 +169,15 @@ export function renderVietQR(target, payload, options = {}) {
     let path = '';
     for (let row = 0; row < moduleCount; row++) {
       for (let col = 0; col < moduleCount; col++) {
+        // Skip drawing if in hole area and centerText is provided
+        if (centerText) {
+          if (
+            row >= holePos && row < holePos + holeSize &&
+            col >= holePos && col < holePos + holeSize
+          ) {
+            continue;
+          }
+        }
         if (qr.isDark(row, col)) {
           path += `M${margin + col},${margin + row}h1v1h-1z`;
         }
@@ -77,6 +185,45 @@ export function renderVietQR(target, payload, options = {}) {
     }
 
     svg += `<path d="${path}" fill="${dark}"/>`;
+
+    if (centerText) {
+      const cx = margin + moduleCount / 2;
+      const cy = margin + moduleCount / 2;
+
+      // Draw background for center text
+      svg += `<rect x="${cx - holeSize/2}" y="${cy - holeSize/2}" width="${holeSize}" height="${holeSize}" fill="${light}"/>`;
+
+      // Draw center text
+      const fontSize = Math.max(1, holeSize / (centerText.length * 0.6));
+      svg += `<text x="${cx}" y="${cy}" font-family="sans-serif" font-weight="bold" font-size="${fontSize}" fill="${dark}" text-anchor="middle" dominant-baseline="middle">${centerText}</text>`;
+    }
+
+    if (addPolaroidFrame) {
+      const paddingX = margin;
+      const startY = viewBoxW + 2;
+      const lineHeight = Math.max(1, Math.round((viewBoxH - viewBoxW) * 0.15));
+      let currentY = startY + lineHeight;
+
+      if (polaroidInfo.bankName) {
+        svg += `<text x="${paddingX}" y="${currentY}" font-family="sans-serif" font-weight="bold" font-size="${lineHeight * 1.2}" fill="${dark}" text-anchor="start">${polaroidInfo.bankName}</text>`;
+        currentY += lineHeight * 1.5;
+      }
+
+      if (polaroidInfo.accountName) {
+        svg += `<text x="${paddingX}" y="${currentY}" font-family="sans-serif" font-size="${lineHeight}" fill="${dark}" text-anchor="start">${polaroidInfo.accountName}</text>`;
+        currentY += lineHeight * 1.2;
+      }
+
+      if (polaroidInfo.amount) {
+        svg += `<text x="${paddingX}" y="${currentY}" font-family="sans-serif" font-weight="bold" font-size="${lineHeight}" fill="${dark}" text-anchor="start">${polaroidInfo.amount}</text>`;
+        currentY += lineHeight * 1.2;
+      }
+
+      if (polaroidInfo.remark) {
+        svg += `<text x="${paddingX}" y="${currentY}" font-family="sans-serif" font-style="italic" font-size="${lineHeight * 0.8}" fill="${dark}" text-anchor="start">${polaroidInfo.remark}</text>`;
+      }
+    }
+
     svg += `</svg>`;
 
     target.innerHTML = svg;

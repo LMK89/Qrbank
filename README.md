@@ -14,9 +14,7 @@ Module JavaScript thuần sinh mã QR chuyển khoản ngân hàng Việt Nam th
 
 ## Cài đặt
 
-> Package **chưa được publish lên npm registry**, và repo này hiện đang **private**. Hai điều đó nghĩa là:
-> - `npm install github:LMK89/Qrbank` chỉ chạy được trên máy **đã có quyền truy cập repo** (SSH key hoặc HTTPS credential/PAT đã cấu hình sẵn với account có quyền), không dùng được cho người ngoài.
-> - jsDelivr / các CDN đọc thẳng từ GitHub **không hoạt động với repo private** — nếu cần dùng qua thẻ `<script>` từ nơi khác, phải build ra `dist/vietqr.umd.min.js` rồi tự host (copy file, hoặc publish lên npm để dùng CDN như jsDelivr/unpkg qua tên package).
+> Package **chưa được publish lên npm registry**. Trong lúc chờ publish, dùng qua thẻ `<script>` (jsDelivr đọc thẳng từ GitHub) hoặc `npm install` trực tiếp từ repo Git.
 
 Khi đã publish lên npm:
 
@@ -24,13 +22,18 @@ Khi đã publish lên npm:
 npm install vietqr-core
 ```
 
-Trong lúc chưa publish và repo còn private — cài từ chính máy bạn (đã có quyền truy cập):
+Trong lúc chưa publish, cài thẳng từ GitHub:
 
 ```bash
 npm install github:LMK89/Qrbank
 ```
 
-Hoặc copy thẳng file đã build (`dist/vietqr.umd.min.js`) vào project khác và dùng qua thẻ `<script src="./vietqr.umd.min.js">`.
+Hoặc tải qua thẻ `<script>` (UMD version):
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/LMK89/Qrbank@v0.1.0/dist/vietqr.umd.min.js"></script>
+```
+*(Luôn pin theo tag/commit cụ thể như `@v0.1.0`, đừng dùng `@latest`. Repo hiện chưa có tag nào — xem mục "Sau khi public" bên dưới.)*
 
 ## Cách dùng
 
@@ -65,15 +68,13 @@ const payload = buildVietQR({ bankBin: '970436', accountNo: '1234567890', amount
 
 ### Dùng qua thẻ `<script>`
 
-Repo đang private nên chưa dùng jsDelivr được (CDN chỉ đọc repo public). Copy file `dist/vietqr.umd.min.js` vào project cần dùng, rồi:
-
 ```html
 <!DOCTYPE html>
 <html>
 <body>
   <canvas id="qr"></canvas>
 
-  <script src="./vietqr.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/LMK89/Qrbank@v0.1.0/dist/vietqr.umd.min.js"></script>
   <script>
     const payload = VietQR.buildVietQR({
       bankBin: '970436',
@@ -86,8 +87,6 @@ Repo đang private nên chưa dùng jsDelivr được (CDN chỉ đọc repo pub
 </body>
 </html>
 ```
-
-*(Khi nào publish lên npm hoặc public hoá repo, đổi lại `src` thành `https://cdn.jsdelivr.net/gh/LMK89/Qrbank@v0.1.0/dist/vietqr.umd.min.js` hoặc CDN của npm.)*
 
 ## API
 

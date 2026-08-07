@@ -14,18 +14,26 @@ Module JavaScript thuần sinh mã QR chuyển khoản ngân hàng Việt Nam th
 
 ## Cài đặt
 
-Sử dụng qua npm:
+> Package **chưa được publish lên npm registry**. Trong lúc chờ publish, dùng qua thẻ `<script>` (jsDelivr đọc thẳng từ GitHub) hoặc `npm install` trực tiếp từ repo Git.
+
+Khi đã publish lên npm:
 
 ```bash
 npm install vietqr-core
 ```
 
+Trong lúc chưa publish, cài thẳng từ GitHub:
+
+```bash
+npm install github:LMK89/Qrbank
+```
+
 Hoặc tải qua thẻ `<script>` (UMD version):
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/YOUR_USERNAME/vietqr-core@v0.1.0/dist/vietqr.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/LMK89/Qrbank@v0.1.0/dist/vietqr.umd.min.js"></script>
 ```
-*(Thay thế `YOUR_USERNAME` và phiên bản tương ứng)*
+*(Luôn pin theo tag/commit cụ thể như `@v0.1.0`, đừng dùng `@latest`. Repo hiện chưa có tag nào — xem mục "Sau khi public" bên dưới.)*
 
 ## Cách dùng
 
@@ -39,7 +47,7 @@ const payload = buildVietQR({
   bankBin: '970436',       // Bắt buộc: BIN ngân hàng (6 chữ số)
   accountNo: '1234567890', // Bắt buộc: Số tài khoản
   amount: 250000,          // Tùy chọn: Số tiền (số nguyên)
-  purpose: 'An trua'       // Tùy chọn: Nội dung chuyển khoản
+  purpose: 'Ăn trưa'       // Tùy chọn: Nội dung chuyển khoản (tự sanitize, không cần bỏ dấu tay)
 });
 
 // 2. Render ra Canvas hoặc SVG
@@ -50,6 +58,14 @@ renderVietQR(targetElement, payload, {
 });
 ```
 
+### Dùng qua `require` (Node CommonJS)
+
+```javascript
+const { buildVietQR, renderVietQR } = require('vietqr-core');
+
+const payload = buildVietQR({ bankBin: '970436', accountNo: '1234567890', amount: 50000 });
+```
+
 ### Dùng qua thẻ `<script>`
 
 ```html
@@ -58,7 +74,7 @@ renderVietQR(targetElement, payload, {
 <body>
   <canvas id="qr"></canvas>
 
-  <script src="https://cdn.jsdelivr.net/gh/YOUR_USERNAME/vietqr-core@v0.1.0/dist/vietqr.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/LMK89/Qrbank@v0.1.0/dist/vietqr.umd.min.js"></script>
   <script>
     const payload = VietQR.buildVietQR({
       bankBin: '970436',

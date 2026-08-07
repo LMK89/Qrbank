@@ -1831,9 +1831,6 @@ function renderVietQR(target, payload, options = {}) {
   if (addPolaroidFrame) {
     canvasHeight += polaroidHeight;
   }
-  const holeRatio = 0.25;
-  const holeSize = Math.floor(moduleCount * holeRatio);
-  const holePos = Math.floor((moduleCount - holeSize) / 2);
   if (target.tagName && target.tagName.toLowerCase() === "canvas") {
     const canvas = target;
     const ctx = canvas.getContext("2d");
@@ -1846,11 +1843,6 @@ function renderVietQR(target, payload, options = {}) {
     ctx.fillStyle = dark;
     for (let row = 0; row < moduleCount; row++) {
       for (let col = 0; col < moduleCount; col++) {
-        if (centerText) {
-          if (row >= holePos && row < holePos + holeSize && col >= holePos && col < holePos + holeSize) {
-            continue;
-          }
-        }
         if (qr.isDark(row, col)) {
           const x = (margin + col) * tileW;
           const y = (margin + row) * tileH;
@@ -1861,14 +1853,16 @@ function renderVietQR(target, payload, options = {}) {
     if (centerText) {
       const cx = actualSize / 2;
       const cy = actualSize / 2;
-      const rectSize = holeSize * tileW;
-      ctx.fillStyle = light;
-      ctx.fillRect(cx - rectSize / 2, cy - rectSize / 2, rectSize, rectSize);
-      ctx.fillStyle = dark;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      const fontSize = Math.max(10, Math.floor(rectSize / (centerText.length * 0.6)));
-      ctx.font = `bold ${fontSize}px sans-serif`;
+      const maxTextWidth = actualSize * 0.8;
+      let fontSize = Math.max(12, Math.floor(maxTextWidth / (centerText.length * 0.6)));
+      ctx.font = `bold 900 ${fontSize}px sans-serif`;
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = Math.max(3, fontSize * 0.15);
+      ctx.lineJoin = "round";
+      ctx.strokeText(centerText, cx, cy);
+      ctx.fillStyle = light;
       ctx.fillText(centerText, cx, cy);
     }
     if (addPolaroidFrame) {
@@ -1915,11 +1909,6 @@ function renderVietQR(target, payload, options = {}) {
     let path = "";
     for (let row = 0; row < moduleCount; row++) {
       for (let col = 0; col < moduleCount; col++) {
-        if (centerText) {
-          if (row >= holePos && row < holePos + holeSize && col >= holePos && col < holePos + holeSize) {
-            continue;
-          }
-        }
         if (qr.isDark(row, col)) {
           path += `M${margin + col},${margin + row}h1v1h-1z`;
         }
@@ -1929,9 +1918,10 @@ function renderVietQR(target, payload, options = {}) {
     if (centerText) {
       const cx = margin + moduleCount / 2;
       const cy = margin + moduleCount / 2;
-      svg += `<rect x="${cx - holeSize / 2}" y="${cy - holeSize / 2}" width="${holeSize}" height="${holeSize}" fill="${light}"/>`;
-      const fontSize = Math.max(1, holeSize / (centerText.length * 0.6));
-      svg += `<text x="${cx}" y="${cy}" font-family="sans-serif" font-weight="bold" font-size="${fontSize}" fill="${dark}" text-anchor="middle" dominant-baseline="middle">${centerText}</text>`;
+      const maxTextWidthModules = moduleCount * 0.8;
+      const fontSize = Math.max(2, maxTextWidthModules / (centerText.length * 0.6));
+      const strokeWidth = fontSize * 0.15;
+      svg += `<text x="${cx}" y="${cy}" font-family="sans-serif" font-weight="900" font-size="${fontSize}" fill="${light}" stroke="${dark}" stroke-width="${strokeWidth}" stroke-linejoin="round" text-anchor="middle" dominant-baseline="middle">${centerText}</text>`;
     }
     if (addPolaroidFrame) {
       const paddingX = margin;

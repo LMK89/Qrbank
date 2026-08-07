@@ -47,12 +47,6 @@ export function renderVietQR(target, payload, options = {}) {
     canvasHeight += polaroidHeight;
   }
 
-  // Center hole calculation for centerText
-  // Usually the center hole should cover around 20-30% of the QR code area to not break the High EC.
-  const holeRatio = 0.25;
-  const holeSize = Math.floor(moduleCount * holeRatio);
-  const holePos = Math.floor((moduleCount - holeSize) / 2);
-
   if (target.tagName && target.tagName.toLowerCase() === 'canvas') {
     // Render to Canvas
     const canvas = target;
@@ -72,16 +66,6 @@ export function renderVietQR(target, payload, options = {}) {
     ctx.fillStyle = dark;
     for (let row = 0; row < moduleCount; row++) {
       for (let col = 0; col < moduleCount; col++) {
-        // Skip drawing if in hole area and centerText is provided
-        if (centerText) {
-          if (
-            row >= holePos && row < holePos + holeSize &&
-            col >= holePos && col < holePos + holeSize
-          ) {
-            continue;
-          }
-        }
-
         if (qr.isDark(row, col)) {
           const x = (margin + col) * tileW;
           const y = (margin + row) * tileH;
@@ -94,18 +78,23 @@ export function renderVietQR(target, payload, options = {}) {
     if (centerText) {
       const cx = actualSize / 2;
       const cy = actualSize / 2;
-      const rectSize = holeSize * tileW;
 
-      // Draw background for center text
-      ctx.fillStyle = light;
-      ctx.fillRect(cx - rectSize/2, cy - rectSize/2, rectSize, rectSize);
-
-      // Draw center text
-      ctx.fillStyle = dark;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const fontSize = Math.max(10, Math.floor(rectSize / (centerText.length * 0.6))); // basic auto scale
-      ctx.font = `bold ${fontSize}px sans-serif`;
+
+      // Calculate font size relative to canvas size. We want the text to span most of the center
+      const maxTextWidth = actualSize * 0.8;
+      let fontSize = Math.max(12, Math.floor(maxTextWidth / (centerText.length * 0.6)));
+      ctx.font = `bold 900 ${fontSize}px sans-serif`;
+
+      // Optional: Add outline/stroke to make it pop against both light and dark modules
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = Math.max(3, fontSize * 0.15);
+      ctx.lineJoin = 'round';
+      ctx.strokeText(centerText, cx, cy);
+
+      // Draw center text (Cutout effect - color is light)
+      ctx.fillStyle = light;
       ctx.fillText(centerText, cx, cy);
     }
 
@@ -169,15 +158,6 @@ export function renderVietQR(target, payload, options = {}) {
     let path = '';
     for (let row = 0; row < moduleCount; row++) {
       for (let col = 0; col < moduleCount; col++) {
-        // Skip drawing if in hole area and centerText is provided
-        if (centerText) {
-          if (
-            row >= holePos && row < holePos + holeSize &&
-            col >= holePos && col < holePos + holeSize
-          ) {
-            continue;
-          }
-        }
         if (qr.isDark(row, col)) {
           path += `M${margin + col},${margin + row}h1v1h-1z`;
         }
@@ -190,12 +170,13 @@ export function renderVietQR(target, payload, options = {}) {
       const cx = margin + moduleCount / 2;
       const cy = margin + moduleCount / 2;
 
-      // Draw background for center text
-      svg += `<rect x="${cx - holeSize/2}" y="${cy - holeSize/2}" width="${holeSize}" height="${holeSize}" fill="${light}"/>`;
+      // Font size in SVG modules units
+      const maxTextWidthModules = moduleCount * 0.8;
+      const fontSize = Math.max(2, maxTextWidthModules / (centerText.length * 0.6));
+      const strokeWidth = fontSize * 0.15;
 
-      // Draw center text
-      const fontSize = Math.max(1, holeSize / (centerText.length * 0.6));
-      svg += `<text x="${cx}" y="${cy}" font-family="sans-serif" font-weight="bold" font-size="${fontSize}" fill="${dark}" text-anchor="middle" dominant-baseline="middle">${centerText}</text>`;
+      // Draw center text (White cutout effect, with dark outline for readability)
+      svg += `<text x="${cx}" y="${cy}" font-family="sans-serif" font-weight="900" font-size="${fontSize}" fill="${light}" stroke="${dark}" stroke-width="${strokeWidth}" stroke-linejoin="round" text-anchor="middle" dominant-baseline="middle">${centerText}</text>`;
     }
 
     if (addPolaroidFrame) {

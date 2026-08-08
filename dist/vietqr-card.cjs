@@ -394,10 +394,10 @@ var require_qrcode = __commonJS({
           qrSvg += !opts.scalable ? ' width="' + size + 'px" height="' + size + 'px"' : "";
           qrSvg += ' viewBox="0 0 ' + size + " " + size + '" ';
           qrSvg += ' preserveAspectRatio="xMinYMin meet"';
-          qrSvg += title.text || alt.text ? ' role="img" aria-labelledby="' + escapeXml([title.id, alt.id].join(" ").trim()) + '"' : "";
+          qrSvg += title.text || alt.text ? ' role="img" aria-labelledby="' + escapeXml2([title.id, alt.id].join(" ").trim()) + '"' : "";
           qrSvg += ">";
-          qrSvg += title.text ? '<title id="' + escapeXml(title.id) + '">' + escapeXml(title.text) + "</title>" : "";
-          qrSvg += alt.text ? '<description id="' + escapeXml(alt.id) + '">' + escapeXml(alt.text) + "</description>" : "";
+          qrSvg += title.text ? '<title id="' + escapeXml2(title.id) + '">' + escapeXml2(title.text) + "</title>" : "";
+          qrSvg += alt.text ? '<description id="' + escapeXml2(alt.id) + '">' + escapeXml2(alt.text) + "</description>" : "";
           qrSvg += '<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>';
           qrSvg += '<path d="';
           for (r = 0; r < _this.getModuleCount(); r += 1) {
@@ -446,13 +446,13 @@ var require_qrcode = __commonJS({
           img += '"';
           if (alt) {
             img += ' alt="';
-            img += escapeXml(alt);
+            img += escapeXml2(alt);
             img += '"';
           }
           img += "/>";
           return img;
         };
-        var escapeXml = function(s) {
+        var escapeXml2 = function(s) {
           var escaped = "";
           for (var i = 0; i < s.length; i += 1) {
             var c = s.charAt(i);
@@ -1830,8 +1830,11 @@ function findBank(bin) {
 function svgToDataURL(svg) {
   return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
 }
+function escapeXml(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
 function generateVietQRCard(payload, templateId = "minimal", data = {}) {
-  const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  const fontStack = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
   const qrSize = 300;
   let bankName = data.bankName;
   if (!bankName && data.bankBin) {
@@ -1893,23 +1896,23 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     svg += `</svg>`;
     let currentY = innerPadding + qrDisplaySize + 30;
     if (bankName) {
-      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="16" fill="#6b7280" text-anchor="middle">${bankName}</text>`;
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="16" fill="#6b7280" text-anchor="middle">${escapeXml(bankName)}</text>`;
       currentY += 26;
     }
     if (data.accountName) {
-      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="900" font-size="20" fill="#111827" text-anchor="middle">${data.accountName}</text>`;
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="900" font-size="20" fill="#111827" text-anchor="middle">${escapeXml(data.accountName)}</text>`;
       currentY += 24;
     }
     if (data.accountNo) {
-      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-size="16" fill="#374151" text-anchor="middle">${data.accountNo}</text>`;
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-size="16" fill="#374151" text-anchor="middle">${escapeXml(data.accountNo)}</text>`;
       currentY += 30;
     }
     if (amountStr) {
-      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="24" fill="#2563eb" text-anchor="middle">${amountStr}</text>`;
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="24" fill="#2563eb" text-anchor="middle">${escapeXml(amountStr)}</text>`;
       currentY += 26;
     }
     if (data.purpose) {
-      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-size="14" font-style="italic" fill="#6b7280" text-anchor="middle">${data.purpose}</text>`;
+      svg += `<text x="${cardWidth / 2}" y="${currentY}" font-family="${fontStack}" font-size="14" font-style="italic" fill="#6b7280" text-anchor="middle">${escapeXml(data.purpose)}</text>`;
     }
     svg += `</svg>`;
     return {
@@ -1941,8 +1944,8 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     const valueX = cardWidth - innerPadding;
     const drawRow = (label, value, isBold = false) => {
       if (!value) return;
-      svg += `<text x="${labelX}" y="${currentY}" font-family="${fontStack}" font-size="14" fill="#6b7280" text-anchor="start">${label}</text>`;
-      svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="14" font-weight="${isBold ? "bold" : "normal"}" fill="#111827" text-anchor="end">${value}</text>`;
+      svg += `<text x="${labelX}" y="${currentY}" font-family="${fontStack}" font-size="14" fill="#6b7280" text-anchor="start">${escapeXml(label)}</text>`;
+      svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="14" font-weight="${isBold ? "bold" : "normal"}" fill="#111827" text-anchor="end">${escapeXml(value)}</text>`;
       currentY += rowHeight;
     };
     drawRow("Ng\xE2n h\xE0ng", bankName, true);
@@ -1953,7 +1956,7 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     currentY += 30;
     if (amountStr) {
       svg += `<text x="${labelX}" y="${currentY}" font-family="${fontStack}" font-size="16" fill="#6b7280" text-anchor="start">T\u1ED5ng ti\u1EC1n</text>`;
-      svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="20" font-weight="900" fill="#2563eb" text-anchor="end">${amountStr}</text>`;
+      svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="20" font-weight="900" fill="#2563eb" text-anchor="end">${escapeXml(amountStr)}</text>`;
       currentY += rowHeight + 10;
     }
     if (data.purpose) {
@@ -1987,13 +1990,13 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     let currentYLeft = 40;
     svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="14" font-weight="bold" fill="#93c5fd" text-anchor="start">VIETQR BOARDING PASS</text>`;
     currentYLeft += 40;
-    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="32" font-weight="900" fill="#ffffff" text-anchor="start">${amountStr || "NO AMOUNT"}</text>`;
+    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="32" font-weight="900" fill="#ffffff" text-anchor="start">${escapeXml(amountStr || "NO AMOUNT")}</text>`;
     currentYLeft += 25;
-    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="14" fill="#bfdbfe" text-anchor="start">${bankName || "BANK"}</text>`;
+    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="14" fill="#bfdbfe" text-anchor="start">${escapeXml(bankName || "BANK")}</text>`;
     currentYLeft += 50;
     const drawLeftLabelValue = (x, y, label, value) => {
-      svg += `<text x="${x}" y="${y}" font-family="${fontStack}" font-size="12" fill="#93c5fd" text-anchor="start">${label}</text>`;
-      svg += `<text x="${x}" y="${y + 20}" font-family="${fontStack}" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="start">${value}</text>`;
+      svg += `<text x="${x}" y="${y}" font-family="${fontStack}" font-size="12" fill="#93c5fd" text-anchor="start">${escapeXml(label)}</text>`;
+      svg += `<text x="${x}" y="${y + 20}" font-family="${fontStack}" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="start">${escapeXml(value)}</text>`;
     };
     drawLeftLabelValue(paddingLeft, currentYLeft, "PASSENGER / ACCOUNT", data.accountName || "UNKNOWN");
     drawLeftLabelValue(paddingLeft + 200, currentYLeft, "ACCOUNT NO.", data.accountNo || "UNKNOWN");

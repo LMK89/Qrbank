@@ -55,8 +55,12 @@ const build = async () => {
   const bundleCard = readFileSync('dist/vietqr-card.min.js', 'utf8').trim();
   const demoPath = 'docs/index.html';
   const demoHtml = readFileSync(demoPath, 'utf8');
+  // Greedy up to the `</script>` immediately preceding `</head>`: the bundle
+  // is plain JS with no literal "</script>" substring, but a stale demo file
+  // saved from a previous broken build can have one lodged mid-bundle, which
+  // a lazy match would stop at and leave the corrupt remainder untouched.
   const updatedDemoHtml = demoHtml.replace(
-    /<script id="vietqr-bundle">[\s\S]*?<\/script>/,
+    /<script id="vietqr-bundle">[\s\S]*<\/script>(?=\s*<\/head>)/,
     () => `<script id="vietqr-bundle">\n${bundleCore}\n\n${bundleCard}\n  </script>`
   );
   writeFileSync(demoPath, updatedDemoHtml);

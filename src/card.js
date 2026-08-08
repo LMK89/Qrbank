@@ -164,5 +164,151 @@ export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
     };
   }
 
+  // ----------------------------------------------------
+  // Template: Receipt (1C - Biên lai)
+  // ----------------------------------------------------
+  if (templateId === 'receipt') {
+    const cardWidth = 360;
+    const cardHeight = 600;
+    const innerPadding = 24;
+    const qrDisplaySize = cardWidth - (innerPadding * 2);
+
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cardWidth}" height="${cardHeight}" viewBox="0 0 ${cardWidth} ${cardHeight}">`;
+
+    // Receipt Base (Slightly off-white)
+    svg += `<rect x="0" y="0" width="${cardWidth}" height="${cardHeight}" fill="#fcfcfc" />`;
+
+    // Receipt Top Zigzag
+    let zigzag = `M0,0 `;
+    for (let i = 0; i < cardWidth; i += 10) {
+      zigzag += `L${i+5},8 L${i+10},0 `;
+    }
+    svg += `<path d="${zigzag}" fill="#e5e7eb" />`;
+
+    // QR Code Placement
+    const qrY = innerPadding + 10;
+    svg += `<svg x="${innerPadding}" y="${qrY}" width="${qrDisplaySize}" height="${qrDisplaySize}" viewBox="0 0 ${qrSize} ${qrSize}">`;
+    svg += qrSvgStr;
+    svg += `</svg>`;
+
+    let currentY = qrY + qrDisplaySize + 20;
+
+    // Dashed Divider
+    svg += `<line x1="${innerPadding}" y1="${currentY}" x2="${cardWidth - innerPadding}" y2="${currentY}" stroke="#d1d5db" stroke-width="2" stroke-dasharray="6, 4" />`;
+    currentY += 30;
+
+    const rowHeight = 28;
+    const labelX = innerPadding;
+    const valueX = cardWidth - innerPadding;
+
+    const drawRow = (label, value, isBold = false) => {
+        if (!value) return;
+        svg += `<text x="${labelX}" y="${currentY}" font-family="${fontStack}" font-size="14" fill="#6b7280" text-anchor="start">${label}</text>`;
+        svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="14" font-weight="${isBold ? 'bold' : 'normal'}" fill="#111827" text-anchor="end">${value}</text>`;
+        currentY += rowHeight;
+    };
+
+    drawRow('Ngân hàng', bankName, true);
+    drawRow('Tài khoản', data.accountNo, true);
+    drawRow('Chủ thẻ', data.accountName, true);
+
+    currentY += 10;
+    svg += `<line x1="${innerPadding}" y1="${currentY}" x2="${cardWidth - innerPadding}" y2="${currentY}" stroke="#d1d5db" stroke-width="2" stroke-dasharray="6, 4" />`;
+    currentY += 30;
+
+    if (amountStr) {
+       svg += `<text x="${labelX}" y="${currentY}" font-family="${fontStack}" font-size="16" fill="#6b7280" text-anchor="start">Tổng tiền</text>`;
+       svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="20" font-weight="900" fill="#2563eb" text-anchor="end">${amountStr}</text>`;
+       currentY += rowHeight + 10;
+    }
+
+    if (data.purpose) {
+       drawRow('Nội dung', data.purpose);
+    }
+
+    // Receipt Bottom Zigzag
+    let bottomZigzag = `M0,${cardHeight} `;
+    for (let i = 0; i < cardWidth; i += 10) {
+      bottomZigzag += `L${i+5},${cardHeight-8} L${i+10},${cardHeight} `;
+    }
+    svg += `<path d="${bottomZigzag}" fill="#e5e7eb" />`;
+
+    svg += `</svg>`;
+
+    return {
+      svg,
+      dataURL: svgToDataURL(svg)
+    };
+  }
+
+  // ----------------------------------------------------
+  // Template: Boarding Pass (1B - Vé máy bay)
+  // ----------------------------------------------------
+  if (templateId === 'boarding-pass') {
+    const cardWidth = 600;
+    const cardHeight = 260;
+    const leftWidth = 400; // Left section width
+    const rightWidth = 200; // Right section width
+    const qrDisplaySize = 160;
+
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cardWidth}" height="${cardHeight}" viewBox="0 0 ${cardWidth} ${cardHeight}">`;
+
+    // Boarding Pass Base
+    svg += `<rect x="0" y="0" width="${cardWidth}" height="${cardHeight}" rx="16" fill="#1e3a8a" />`;
+
+    // Right section background (White/light gray)
+    svg += `<rect x="${leftWidth}" y="0" width="${rightWidth}" height="${cardHeight}" rx="16" fill="#ffffff" />`;
+    // Fix the corner overlap between left and right sections
+    svg += `<rect x="${leftWidth}" y="0" width="16" height="${cardHeight}" fill="#ffffff" />`;
+
+    // Perforated line (dashed) dividing the two sections
+    svg += `<line x1="${leftWidth}" y1="0" x2="${leftWidth}" y2="${cardHeight}" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6, 6" />`;
+
+    // Circular cutouts at top and bottom of the perforated line
+    svg += `<circle cx="${leftWidth}" cy="0" r="10" fill="#1e3a8a" />`;
+    svg += `<circle cx="${leftWidth}" cy="${cardHeight}" r="10" fill="#1e3a8a" />`;
+
+    // --- Left Section (Details) ---
+    const paddingLeft = 30;
+    let currentYLeft = 40;
+
+    // Header
+    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="14" font-weight="bold" fill="#93c5fd" text-anchor="start">VIETQR BOARDING PASS</text>`;
+    currentYLeft += 40;
+
+    // Amount & Bank Name
+    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="32" font-weight="900" fill="#ffffff" text-anchor="start">${amountStr || 'NO AMOUNT'}</text>`;
+    currentYLeft += 25;
+    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="14" fill="#bfdbfe" text-anchor="start">${bankName || 'BANK'}</text>`;
+    currentYLeft += 50;
+
+    // Details row
+    const drawLeftLabelValue = (x, y, label, value) => {
+        svg += `<text x="${x}" y="${y}" font-family="${fontStack}" font-size="12" fill="#93c5fd" text-anchor="start">${label}</text>`;
+        svg += `<text x="${x}" y="${y + 20}" font-family="${fontStack}" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="start">${value}</text>`;
+    };
+
+    drawLeftLabelValue(paddingLeft, currentYLeft, 'PASSENGER / ACCOUNT', data.accountName || 'UNKNOWN');
+    drawLeftLabelValue(paddingLeft + 200, currentYLeft, 'ACCOUNT NO.', data.accountNo || 'UNKNOWN');
+    currentYLeft += 50;
+
+    drawLeftLabelValue(paddingLeft, currentYLeft, 'REMARK', data.purpose || 'N/A');
+
+    // --- Right Section (QR Code) ---
+    const qrX = leftWidth + (rightWidth - qrDisplaySize) / 2;
+    const qrY = (cardHeight - qrDisplaySize) / 2;
+
+    svg += `<svg x="${qrX}" y="${qrY}" width="${qrDisplaySize}" height="${qrDisplaySize}" viewBox="0 0 ${qrSize} ${qrSize}">`;
+    svg += qrSvgStr;
+    svg += `</svg>`;
+
+    svg += `</svg>`;
+
+    return {
+      svg,
+      dataURL: svgToDataURL(svg)
+    };
+  }
+
   throw new Error(`Unknown templateId: ${templateId}`);
 }

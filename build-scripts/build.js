@@ -2,6 +2,8 @@ import * as esbuild from 'esbuild';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const build = async () => {
+  const banner = { js: '/* vietqr-core v0.1.0 | MIT | https://qr.lmk.vn */' };
+
   // IIFE build for <script> tag usage (global `VietQR`), also used by demo/.
   await esbuild.build({
     entryPoints: ['src/index.js'],
@@ -9,6 +11,7 @@ const build = async () => {
     outfile: 'dist/vietqr.umd.js',
     format: 'iife',
     globalName: 'VietQR',
+    banner,
   });
 
   await esbuild.build({
@@ -18,6 +21,7 @@ const build = async () => {
     format: 'iife',
     globalName: 'VietQR',
     minify: true,
+    banner,
   });
 
   await esbuild.build({
@@ -27,6 +31,7 @@ const build = async () => {
     format: 'iife',
     globalName: 'VietQRCard',
     minify: true,
+    banner,
   });
 
   // CJS build for Node `require('vietqr-core')`. Must be a real CJS module
@@ -38,6 +43,7 @@ const build = async () => {
     outfile: 'dist/vietqr.cjs',
     format: 'cjs',
     platform: 'node',
+    banner,
   });
 
   await esbuild.build({
@@ -46,6 +52,7 @@ const build = async () => {
     outfile: 'dist/vietqr-card.cjs',
     format: 'cjs',
     platform: 'node',
+    banner,
   });
 
   // Inline the minified bundle into docs/index.html so the demo file keeps

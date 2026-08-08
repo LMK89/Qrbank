@@ -1,0 +1,43 @@
+name: Bank list review reminder
+
+on:
+  schedule:
+    # First day of every quarter: Jan 1, Apr 1, Jul 1, Oct 1
+    - cron: '0 0 1 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Định kỳ: review danh sách ngân hàng (src/banks.json)';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+            });
+            const existing = issues.find(issue => issue.title === title && !issue.pull_request);
+            if (existing) {
+              console.log(`Issue đã tồn tại (#${existing.number}), bỏ qua.`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: [
+                'Nhắc định kỳ 3 tháng: kiểm tra danh sách ngân hàng trong `src/banks.json`.',
+                '',
+                '- Có ngân hàng / ngân hàng số mới nào cần thêm không?',
+                '- Có ngân hàng nào đổi tên hoặc sáp nhập không?',
+                '- BIN phải là 6 chữ số, không trùng lặp (CI đã validate).',
+                '- Trước khi commit, xác minh BIN bằng cách quét thử bằng app ngân hàng.',
+              ].join('\n'),
+            });

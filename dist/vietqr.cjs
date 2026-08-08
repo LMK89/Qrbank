@@ -1,3 +1,4 @@
+/* vietqr-core v0.1.0 | MIT | https://qr.lmk.vn */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -1723,6 +1724,7 @@ __export(src_exports, {
   buildVietQR: () => buildVietQR,
   findBank: () => findBank,
   renderVietQR: () => renderVietQR,
+  sanitizeAccountName: () => sanitizeAccountName,
   sanitizePurpose: () => sanitizePurpose
 });
 module.exports = __toCommonJS(src_exports);
@@ -1758,10 +1760,21 @@ function crc16(str) {
 }
 
 // src/sanitize.js
+function stripAccents(str) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toUpperCase();
+}
 function sanitizePurpose(str) {
   if (!str) return "";
-  let sanitized = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toUpperCase().replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
+  let sanitized = stripAccents(str).replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
   return sanitized.substring(0, 25).trim();
+}
+function sanitizeAccountName(str, maxLen = 60) {
+  if (!str) return "";
+  let sanitized = stripAccents(str).replace(/[^A-Z0-9.&\-'/]/g, " ").replace(/\s+/g, " ").trim();
+  if (sanitized.length > maxLen) {
+    sanitized = sanitized.substring(0, maxLen).trim();
+  }
+  return sanitized;
 }
 
 // src/build.js
@@ -1910,5 +1923,6 @@ function findBank(bin) {
   buildVietQR,
   findBank,
   renderVietQR,
+  sanitizeAccountName,
   sanitizePurpose
 });

@@ -1,9 +1,9 @@
 import { buildVietQR } from './build.js';
 import { renderVietQR } from './render.js';
-import { sanitizePurpose } from './sanitize.js';
+import { sanitizePurpose, sanitizeAccountName } from './sanitize.js';
 import banksData from './banks.json' with { type: 'json' };
 
-export { buildVietQR, renderVietQR, sanitizePurpose };
+export { buildVietQR, renderVietQR, sanitizePurpose, sanitizeAccountName };
 
 export const banks = banksData;
 

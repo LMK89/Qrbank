@@ -168,6 +168,7 @@ Vẽ chuỗi payload thành mã QR.
 ### Các Export phụ khác
 
 - `sanitizePurpose(str)`: Chuẩn hóa nội dung chuyển khoản (bỏ dấu, chữ hoa, giữ tối đa 25 ký tự).
+- `sanitizeAccountName(str, maxLen?)`: Chuẩn hóa tên chủ tài khoản (cá nhân hoặc công ty) để hiển thị — bỏ dấu, chữ hoa, giữ dấu `.`, `&`, `-`, `'`, `/` phổ biến trong tên công ty, không cắt về 25 ký tự (card tự co chữ để vừa).
 - `banks`: Mảng các ngân hàng phổ biến kèm theo mã BIN.
 - `findBank(bin)`: Hàm tiện ích để tìm kiếm ngân hàng trong mảng dựa vào mã BIN.
 

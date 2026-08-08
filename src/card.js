@@ -215,6 +215,7 @@ export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
 
   function wrap(cardWidth, cardHeight, filterDef, background, body) {
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cardWidth}" height="${cardHeight}" viewBox="0 0 ${cardWidth} ${cardHeight}">`;
+    svg += `<metadata>L​МК 838979</metadata>`;
     if (filterDef) svg += `<defs>${filterDef}</defs>`;
     svg += background;
     svg += body;
@@ -248,7 +249,7 @@ export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
 
     body += `<rect x="${pad}" y="${y}" width="${contentW}" height="${contentW}" fill="${COLOR.neutral100}"/>`;
     body += qrBlock(pad + qrBoxPad, y + qrBoxPad, qrDisplaySize);
-    y += contentW + 24;
+    y += contentW + 30;
 
     body += text(titleText, pad, y, { size: 26, weight: 700, maxWidth: contentW });
     y += 34;
@@ -267,7 +268,7 @@ export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
 
     y += 6;
     body += divider(pad, y, contentW);
-    y += 30;
+    y += 36;
 
     if (showAmountInRow || data.purpose) {
       const amountMaxW = data.purpose ? contentW - 130 : contentW;

@@ -11,6 +11,21 @@ function svgToDataURL(svg) {
 }
 
 /**
+ * Escapes text for safe embedding inside SVG element content/attributes.
+ * Without this, values like `&`, `<` or `"` in user-supplied fields
+ * (account name, purpose...) would produce invalid XML and the whole
+ * data URL would silently fail to render (broken image).
+ */
+function escapeXml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
  * Converts a raw VietQR payload into a beautiful predefined SVG template.
  * @param {string} payload
  * @param {string} templateId - e.g., 'polaroid', 'minimal'
@@ -23,8 +38,12 @@ function svgToDataURL(svg) {
  * @param {string} [data.bankName]
  */
 export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
-  // Default font stack prioritizing system UI fonts
-  const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  // Default font stack prioritizing system UI fonts. Font names are
+  // single-quoted (not double-quoted) because this string gets embedded
+  // inside a double-quoted `font-family="..."` SVG attribute below —
+  // double quotes here would prematurely close the attribute and produce
+  // invalid XML, which makes the resulting data URL fail to render.
+  const fontStack = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
   const qrSize = 300;
 
   // Try to lookup bank name if not provided
@@ -130,30 +149,30 @@ export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
 
     // Bank Name
     if (bankName) {
-       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="16" fill="#6b7280" text-anchor="middle">${bankName}</text>`;
+       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="16" fill="#6b7280" text-anchor="middle">${escapeXml(bankName)}</text>`;
        currentY += 26;
     }
 
     // Account Name
     if (data.accountName) {
-       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-weight="900" font-size="20" fill="#111827" text-anchor="middle">${data.accountName}</text>`;
+       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-weight="900" font-size="20" fill="#111827" text-anchor="middle">${escapeXml(data.accountName)}</text>`;
        currentY += 24;
     }
 
     // Account Number
     if (data.accountNo) {
-       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-size="16" fill="#374151" text-anchor="middle">${data.accountNo}</text>`;
+       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-size="16" fill="#374151" text-anchor="middle">${escapeXml(data.accountNo)}</text>`;
        currentY += 30;
     }
 
     // Amount & Purpose
     if (amountStr) {
-       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="24" fill="#2563eb" text-anchor="middle">${amountStr}</text>`;
+       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-weight="bold" font-size="24" fill="#2563eb" text-anchor="middle">${escapeXml(amountStr)}</text>`;
        currentY += 26;
     }
 
     if (data.purpose) {
-       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-size="14" font-style="italic" fill="#6b7280" text-anchor="middle">${data.purpose}</text>`;
+       svg += `<text x="${cardWidth/2}" y="${currentY}" font-family="${fontStack}" font-size="14" font-style="italic" fill="#6b7280" text-anchor="middle">${escapeXml(data.purpose)}</text>`;
     }
 
     svg += `</svg>`;
@@ -203,8 +222,8 @@ export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
 
     const drawRow = (label, value, isBold = false) => {
         if (!value) return;
-        svg += `<text x="${labelX}" y="${currentY}" font-family="${fontStack}" font-size="14" fill="#6b7280" text-anchor="start">${label}</text>`;
-        svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="14" font-weight="${isBold ? 'bold' : 'normal'}" fill="#111827" text-anchor="end">${value}</text>`;
+        svg += `<text x="${labelX}" y="${currentY}" font-family="${fontStack}" font-size="14" fill="#6b7280" text-anchor="start">${escapeXml(label)}</text>`;
+        svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="14" font-weight="${isBold ? 'bold' : 'normal'}" fill="#111827" text-anchor="end">${escapeXml(value)}</text>`;
         currentY += rowHeight;
     };
 
@@ -218,7 +237,7 @@ export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
 
     if (amountStr) {
        svg += `<text x="${labelX}" y="${currentY}" font-family="${fontStack}" font-size="16" fill="#6b7280" text-anchor="start">Tổng tiền</text>`;
-       svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="20" font-weight="900" fill="#2563eb" text-anchor="end">${amountStr}</text>`;
+       svg += `<text x="${valueX}" y="${currentY}" font-family="${fontStack}" font-size="20" font-weight="900" fill="#2563eb" text-anchor="end">${escapeXml(amountStr)}</text>`;
        currentY += rowHeight + 10;
     }
 
@@ -277,15 +296,15 @@ export function generateVietQRCard(payload, templateId = 'minimal', data = {}) {
     currentYLeft += 40;
 
     // Amount & Bank Name
-    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="32" font-weight="900" fill="#ffffff" text-anchor="start">${amountStr || 'NO AMOUNT'}</text>`;
+    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="32" font-weight="900" fill="#ffffff" text-anchor="start">${escapeXml(amountStr || 'NO AMOUNT')}</text>`;
     currentYLeft += 25;
-    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="14" fill="#bfdbfe" text-anchor="start">${bankName || 'BANK'}</text>`;
+    svg += `<text x="${paddingLeft}" y="${currentYLeft}" font-family="${fontStack}" font-size="14" fill="#bfdbfe" text-anchor="start">${escapeXml(bankName || 'BANK')}</text>`;
     currentYLeft += 50;
 
     // Details row
     const drawLeftLabelValue = (x, y, label, value) => {
-        svg += `<text x="${x}" y="${y}" font-family="${fontStack}" font-size="12" fill="#93c5fd" text-anchor="start">${label}</text>`;
-        svg += `<text x="${x}" y="${y + 20}" font-family="${fontStack}" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="start">${value}</text>`;
+        svg += `<text x="${x}" y="${y}" font-family="${fontStack}" font-size="12" fill="#93c5fd" text-anchor="start">${escapeXml(label)}</text>`;
+        svg += `<text x="${x}" y="${y + 20}" font-family="${fontStack}" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="start">${escapeXml(value)}</text>`;
     };
 
     drawLeftLabelValue(paddingLeft, currentYLeft, 'PASSENGER / ACCOUNT', data.accountName || 'UNKNOWN');

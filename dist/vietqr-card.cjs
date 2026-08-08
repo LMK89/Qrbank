@@ -1885,8 +1885,23 @@ function maskAccountNo(accountNo) {
   if (!accountNo) return "";
   return "\u2022\u2022" + String(accountNo).slice(-4);
 }
+function isHexColor(str) {
+  return typeof str === "string" && /^#[0-9a-fA-F]{6}$/.test(str);
+}
+function relativeLuminance(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function textOn(bgHex) {
+  return relativeLuminance(bgHex) > 0.5 ? COLOR.text : COLOR.white;
+}
 function generateVietQRCard(payload, templateId = "minimal", data = {}) {
   const qrSize = 300;
+  const accent = isHexColor(data.accentColor) ? data.accentColor : COLOR.accent;
+  const onAccent = textOn(accent);
   let bankName = data.bankName;
   if (!bankName && data.bankBin) {
     const b = findBank(data.bankBin);
@@ -1964,7 +1979,7 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     if (showAmountInRow || data.purpose) {
       const amountMaxW = data.purpose ? contentW - 130 : contentW;
       if (showAmountInRow) {
-        body += text(amountStr, pad, y, { size: 34, weight: 700, color: COLOR.accent, maxWidth: amountMaxW });
+        body += text(amountStr, pad, y, { size: 34, weight: 700, color: accent, maxWidth: amountMaxW });
       }
       if (data.purpose) {
         body += text(data.purpose, cardWidth - pad, y - (showAmountInRow ? 6 : 0), { size: 13, anchor: "end", maxWidth: 150 });
@@ -1988,7 +2003,7 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     let body = "";
     let ly = pad + 6;
     body += text("Chuy\u1EC3n ti\u1EC1n", pad, ly, { size: 13, weight: 700, spacing: "0.14em", upper: true });
-    body += text("qr.lmk.vn", leftW - pad, ly, { size: 11, spacing: "0.14em", upper: true, anchor: "end", color: COLOR.accent });
+    body += text("qr.lmk.vn", leftW - pad, ly, { size: 11, spacing: "0.14em", upper: true, anchor: "end", color: accent });
     ly += 12;
     body += divider(pad, ly, leftW - pad * 2);
     ly += 30;
@@ -2009,7 +2024,7 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     const amountY = cardHeight - 24;
     body += divider(pad, amountY - 34, leftW - pad * 2);
     body += text("S\u1ED1 ti\u1EC1n", pad, amountY, { size: 10, spacing: "0.14em", upper: true, color: COLOR.neutral600 });
-    body += text(amountStr || "\u2014", pad + 62, amountY, { size: 30, weight: 700, color: COLOR.accent, maxWidth: leftW - pad * 2 - 62 });
+    body += text(amountStr || "\u2014", pad + 62, amountY, { size: 30, weight: 700, color: accent, maxWidth: leftW - pad * 2 - 62 });
     body += `<line x1="${leftW}" y1="0" x2="${leftW}" y2="${cardHeight}" stroke="${COLOR.divider}" stroke-opacity="0.4" stroke-width="2" stroke-dasharray="6,6"/>`;
     body += `<rect x="${leftW}" y="0" width="${rightW}" height="${cardHeight}" fill="${COLOR.neutral100}"/>`;
     const qrRight = rightW - pad * 2;
@@ -2025,9 +2040,9 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     const titleText = data.accountName || bankName || fallbackIdentity;
     let body = "";
     const headerH = 68;
-    body += `<rect x="0" y="0" width="${cardWidth}" height="${headerH}" fill="${COLOR.accent}"/>`;
-    body += text("Y\xEAu c\u1EA7u thanh to\xE1n", pad, 30, { size: 11, spacing: "0.18em", upper: true, color: COLOR.white });
-    body += text(titleText, pad, 54, { size: 22, weight: 700, color: COLOR.white, maxWidth: contentW });
+    body += `<rect x="0" y="0" width="${cardWidth}" height="${headerH}" fill="${accent}"/>`;
+    body += text("Y\xEAu c\u1EA7u thanh to\xE1n", pad, 24, { size: 11, spacing: "0.18em", upper: true, color: onAccent });
+    body += text(titleText, pad, 48, { size: 22, weight: 700, color: onAccent, maxWidth: contentW });
     let y = headerH + pad;
     const row = (label, value) => {
       body += text(label, pad, y, { size: 13, color: COLOR.neutral600 });
@@ -2065,8 +2080,8 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     const holder = data.accountName || fallbackIdentity;
     let body = "";
     const headerH = 118;
-    body += text("Qu\xE9t \u2014 chuy\u1EC3n \u2014 xong", pad, 44, { size: 11, spacing: "0.2em", upper: true, color: COLOR.white });
-    body += text(amountStr || "QU\xC9T M\xC3", pad, 90, { size: 42, weight: 700, color: COLOR.white, maxWidth: cardWidth - pad * 2 });
+    body += text("Qu\xE9t \u2014 chuy\u1EC3n \u2014 xong", pad, 35, { size: 11, spacing: "0.2em", upper: true, color: onAccent });
+    body += text(amountStr || "QU\xC9T M\xC3", pad, 81, { size: 42, weight: 700, color: onAccent, maxWidth: cardWidth - pad * 2 });
     let y = headerH;
     const contentW = cardWidth - pad * 2;
     const qrBoxPad = 26;
@@ -2079,22 +2094,22 @@ function generateVietQRCard(payload, templateId = "minimal", data = {}) {
     const cell = (col, row, label, value) => {
       const x = col * cellW;
       const cy = y + row * cellH;
-      body += `<rect x="${x}" y="${cy}" width="${cellW}" height="${cellH}" fill="${COLOR.accent}"/>`;
-      if (col === 0) body += `<rect x="${cellW - 2}" y="${cy}" width="2" height="${cellH}" fill="${COLOR.white}" fill-opacity="0.35"/>`;
-      if (row === 1) body += `<rect x="${x}" y="${cy}" width="${cellW}" height="2" fill="${COLOR.white}" fill-opacity="0.35"/>`;
-      body += text(label, x + 18, cy + 24, { size: 10, spacing: "0.14em", upper: true, color: COLOR.white, opacity: 0.8 });
-      body += text(value || "\u2014", x + 18, cy + 48, { size: 15, weight: 700, color: COLOR.white, maxWidth: cellW - 36 });
+      body += `<rect x="${x}" y="${cy}" width="${cellW}" height="${cellH}" fill="${accent}"/>`;
+      if (col === 0) body += `<rect x="${cellW - 2}" y="${cy}" width="2" height="${cellH}" fill="${onAccent}" fill-opacity="0.35"/>`;
+      if (row === 1) body += `<rect x="${x}" y="${cy}" width="${cellW}" height="2" fill="${onAccent}" fill-opacity="0.35"/>`;
+      body += text(label, x + 18, cy + 24, { size: 10, spacing: "0.14em", upper: true, color: onAccent, opacity: 0.8 });
+      body += text(value || "\u2014", x + 18, cy + 48, { size: 15, weight: 700, color: onAccent, maxWidth: cellW - 36 });
     };
     cell(0, 0, "Ng\xE2n h\xE0ng", bankName);
     cell(1, 0, "S\u1ED1 t\xE0i kho\u1EA3n", data.accountNo);
     cell(0, 1, "Ch\u1EE7 t\xE0i kho\u1EA3n", holder);
     cell(1, 1, "N\u1ED9i dung", data.purpose);
     y += cellH * 2;
-    body += `<rect x="0" y="${y}" width="${cardWidth}" height="2" fill="${COLOR.white}" fill-opacity="0.35"/>`;
-    body += text("qr.lmk.vn", pad, y + 32, { size: 12, spacing: "0.16em", upper: true, color: COLOR.white });
+    body += `<rect x="0" y="${y}" width="${cardWidth}" height="2" fill="${onAccent}" fill-opacity="0.35"/>`;
+    body += text("qr.lmk.vn", pad, y + 32, { size: 12, spacing: "0.16em", upper: true, color: onAccent });
     y += 46;
     const cardHeight = y;
-    const background = `<g filter="url(#sh)"><rect x="0" y="0" width="${cardWidth}" height="${cardHeight}" fill="${COLOR.accent}"/></g>`;
+    const background = `<g filter="url(#sh)"><rect x="0" y="0" width="${cardWidth}" height="${cardHeight}" fill="${accent}"/></g>`;
     return wrap(cardWidth, cardHeight, shadowFilter("sh", 12, 16, 0.22), background, body);
   }
   if (templateId === "minimal") {
